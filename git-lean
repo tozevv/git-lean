@@ -1,0 +1,310 @@
+#!/bin/sh
+#
+# git-lean -- Extension for a lean git workflow 
+#
+# Copyright (c)2015 Sky UK Limited
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+#
+
+FEATURES="features"
+MASTER="master"
+DEVELOP="develop"
+
+help() {
+	echo "usage: git lean <command>"
+	echo
+	echo "Available subcommands are:"
+	echo 
+	echo "   init      Initialize a new lean git repository."
+	echo "   feature   Manage git featurees for features and bugs."
+	echo "   release   Create a release."
+	echo "   version   Get semantic version for current path."
+	echo
+	echo "Try 'git lean <command> help' for details."
+}
+
+
+git_repo_exists() {
+	git rev-parse --git-dir > /dev/null 2> /dev/null 
+} 
+
+git_develop_exists() {
+	git rev-parse --verify $DEVELOP > /dev/null 2> /dev/null;
+}   
+
+git_master_exists() {
+	git rev-parse --verify $MASTER > /dev/null 2> /dev/null;
+}
+
+git_remote_exists() {
+	git ls-remote 2> /dev/null;
+}
+
+git_clean() {
+	git diff --quiet HEAD 2> /dev/null;
+}
+
+git_is_merging() 
+{
+	HEAD_COMMIT=$(git rev-parse HEAD)
+	MERGE_HEAD_COMMIT=$(git rev-parse MERGE_HEAD 2> /dev/null)
+
+	TARGET_COMMIT=$(git rev-parse $1)
+	SOURCE_COMMIT=$(git rev-parse $2)
+
+	if [ $HEAD_COMMIT == $TARGET_COMMIT ] && [ $MERGE_HEAD_COMMIT == $SOURCE_COMMIT ]; then
+		return 0
+	else 
+		return 1
+	fi
+}
+
+lean_init() {
+	enabled=$(git config --get leanflow.init)
+	if [ -z "$enabled" ] ; then
+		return 1
+	else
+		return 0
+	fi
+}
+
+check_ready() {
+	if ! git_repo_exists ; then
+	 	echo "fatal: not a git repository."
+	 	exit 1
+	fi
+
+	if ! lean_init; then
+		echo "fatal: not a git lean flow repository - 'git lean init' first."
+	fi
+}
+
+check_clean() {
+
+	if ! git_clean; then
+		echo "fatal: working tree contains unstaged or uncommited changes."
+		exit 1
+	fi
+}
+
+help_init() {
+	echo "usage: git lean"
+}
+
+cmd_init() {
+
+	if [ "$2" == "help" ]; then
+		help_init
+		exit 0
+	fi
+
+	if lean_init ; then
+		echo "git lean flow already enabled"
+		exit 0
+	fi
+
+	if ! git_repo_exists ; then
+		echo "fatal: no repository to init."
+		help_init
+		exit 1
+	fi
+
+	if ! git_remote_exists ; then
+		echo "fatal: git lean flow requires a remote repository."
+		exit 1
+	fi
+
+	if ! git_master_exists; then
+	 	echo "creating $MASTER branch"
+
+	 	git checkout -b $MASTER &&
+	 	git symbolic-ref HEAD "refs/heads/$MASTER" &&
+	 	git commit --allow-empty --quiet -m "Git lean enabled." &&
+	 	git push --set-upstream origin $MASTER || { echo 'fatal: failed to create and push $MASTER feature.' ; exit 1; }
+	fi
+
+	if  ! git_develop_exists; then
+		echo "creating $DEVELOP branch"
+
+	 	git checkout $MASTER &&
+	 	git checkout -b $DEVELOP &&
+		git push --set-upstream origin $DEVELOP || { echo 'fatal: failed to create and push $DEVELOP branch.' ; exit 1; }
+	fi
+
+	echo "setting merge policy"
+	git config feature.$MASTER.mergeoptions  "--no-ff" && 
+	git config feature.$DEVELOP.mergeoptions  "--no-ff"  || { echo 'fatal: failed to configure merge policy.' ; exit 1; }
+
+	git config --add leanflow.init "true" 
+	echo "git lean flow enabled"
+}
+
+help_feature() {
+	echo "usage: git lean feature start <name>"
+	echo "		 git lean feature publish <name>"
+	echo "		 git lean feature work <name>"
+	echo "		 git lean feature merge <name>"
+	echo "		 git lean feature delete <name>"
+}
+
+cmd_feature() {
+
+	if [ "$2" == "help" ]; then
+		help_feature
+	else
+		if [ -z "$3" ]; then
+			echo "fatal: missing mandatory parameter <name>."
+			help_feature
+		fi
+
+		if [ "$2" == "start" ]; then
+			check_ready
+			check_clean
+
+			git checkout $DEVELOP --quiet && 
+			git checkout -b $FEATURES/$3 &&
+			git push --set-upstream origin $FEATURES/$3 --quiet ||
+				{ echo 'fatal: failed to create feature.' ; exit 1; }
+
+		elif [ "$2" == "publish" ]; then
+			check_ready
+			check_clean
+
+			git push origin $FEATURES/$3 --quiet
+
+		elif [ "$2" == "work" ]; then
+			check_ready
+			check_clean
+
+			git checkout $FEATURES/$3 --quiet &&
+			git pull --quiet
+
+		elif [ "$2" == "merge" ]; then
+			check_ready
+			
+			if git_clean; then
+
+				git fetch --quiet && 
+				git checkout $FEATURES/$3 --quiet && git pull --quiet &&	
+				git checkout $DEVELOP --quiet && git pull --quiet &&
+				git merge --no-ff $FEATURES/$3 --log  &&
+				git push origin $DEVELOP --quiet
+
+			elif git_is_merging $DEVELOP $FEATURES/$3; then 
+
+				CONFLICTED=$(git diff --name-only --diff-filter=U | wc -l)
+
+				if [ $CONFLICTED != "0" ]; then
+					git status
+				else
+					git commit --edit --file .git/MERGE_MSG &&
+					git merge --no-ff $FEATURES/$3 --log &&
+					git push origin $DEVELOP
+				fi
+			else
+				echo "fatal: working tree contains unstaged or uncommited changes."
+				exit 1
+			fi
+
+		elif [ "$2" == "delete" ]; then
+			git branch -d $FEATURES/$3 &&
+			git push origin --delete $FEATURES/$3 
+		else
+			echo "fatal: invalid subcommand $2."
+			help_feature
+		fi
+	fi
+}
+
+help_feature() {
+	echo "usage: git lean release <major.minor.patch>"
+}
+
+cmd_release() {
+
+	if [ "$2" == "help" ]; then
+		help_release
+	else
+		check_ready
+		check_clean
+		
+		if [ -z "$2" ]; then
+			echo "fatal: missing version parameter."
+			exit 1
+		fi
+ 
+		if [[ "$2" =~ ([0-9]+\.){2}[0-9]+ ]]; then
+		
+		 	git fetch --quiet && 
+		 	git checkout $DEVELOP --quiet && git pull --quiet &&	
+			
+			git tag $2 &&
+
+		 	git checkout $MASTER --quiet && git pull --quiet &&
+ 			
+		 	git merge --no-ff $DEVELOP -m "Release $2" &&
+		 	
+		 	git push origin $MASTER --tags 
+		else
+		 	echo "fatal: version parameter must be <major.minor.patch>"
+		 	exit 1
+		fi
+	fi
+}
+
+help_version() {
+	echo "usage: git lean version"
+}
+
+cmd_version() {
+	if [ "$2" == "help" ]; then
+		help_version
+	else
+		VERSION=$(git describe --tags --abbrev=0 2> /dev/null)
+		BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+		if [ -z "$VERSION" ]; then
+			VERSION="0.0.1"
+		fi
+
+		if [ $BRANCH == $MASTER ]; then
+			echo $VERSION
+		else
+			# create automatic bumped version for develop and feature branches
+			# assume major version is bumped
+			echo $VERSION | awk -F \. {'print $1"."($2+1)".0-snapshot"'}
+
+		fi
+		#git tag --points-at $TARGET | grep -E "([0-9]+\.){2}([0-9]+)(-.+|$)" | sort -r -b -f -t '.' -k 1,1 -k 2,2 -k 3,3 -k 4,4 -g | head -n 1
+	fi
+}
+
+if [ "$1" == "init" ]; then
+	cmd_init $@
+elif [ "$1" == "feature" ]; then
+	cmd_feature $@
+elif [ "$1" == "release" ]; then
+	cmd_release $@
+elif [ "$1" == "version" ]; then
+	cmd_version $@
+else
+	help
+	exit 1
+fi
