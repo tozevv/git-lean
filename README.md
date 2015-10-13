@@ -16,15 +16,21 @@ So we ended up frequently using custom ad-hoc git flow flavours, that lack a nor
 
 ## Workflow
  
-Git lean has two long running branches (as in git flow) *develop* and *master*. The following rules apply:
+Git lean has two long running branches (as in git flow) *develop* and *master*. Also has *feature* branches. However releases are not branches, are simply tags and merged into *master* branch.
 
-* Anything in the *master* branch is **always** deployable to production.
-* You **must** not commit directly to the *master* branch.
+
+![Diagram](diagram.png)
+
+
+The following rules apply:
+
+* Anything in the *master* branch is **always** deployable to production with an assigned semantic version.
+* You **must not** commit directly to the *master* branch.
 * Features **must** be implemented in specific *feature* branches.
 * Merges **must** be done with [--no-ff](http://stackoverflow.com/questions/6701292/git-fast-forward-vs-no-fast-forward-merge).
-* Public history **must** not be [rewriten](http://www.mail-archive.com/dri-devel@lists.sourceforge.net/msg39091.html). 
+* Public history **must not** be [rewriten](http://www.mail-archive.com/dri-devel@lists.sourceforge.net/msg39091.html). 
 
-You should prefer use commit features branches to direct commits to the *develop* branch. However you may commit directly to the *develop* branch for bug fixes and small changes. 
+You should prefer use commit features branches to direct commits to the *develop* branch. However you may commit directly to the *develop* branch for fixing bugs and small changes. 
 
 
 The workflow assumes you have a centralized git remote repository.
