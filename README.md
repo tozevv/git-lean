@@ -7,33 +7,50 @@ Tools for a lean git workflow.
 [Git](https://git-scm.com/) is a very powerful tool but can be very hard to [master](http://think-like-a-git.net/). In our experience none of the more popular git [workflows]( https://www.atlassian.com/git/tutorials/comparing-workflows/) was a perfect fit to our list of requirements:
 
 1. **Don't make me think**: the workflow should be very simple and easy to master by inexperienced git user.
-2. **Continous Delivery**: the workflow should focus on continuous delivery. Creating production-ready releases as an everyday job. This doesn't mean   
+2. **Continous Delivery**: the workflow should focus on continuous delivery. Creating production-ready releases as an everyday job. However deployment to production might not be immediate because of external factors like E2E testing or app store reviews.
 3. **Semantic versioning**:  [semantic versioning](http://semver.org/) should be built into git and into the workflow.  
 
 [Github flow](https://guides.github.com/introduction/flow/) is a very agile workflow appropriate for continuous deployment scenarios where integration is partially achieved in production. The very popular [git flow](http://nvie.com/posts/a-successful-git-branching-model/) on the other hand assumes a relatively long running release process and requires frequent merge across severall branches that can get quite complex.
  
 So we ended up frequently using custom ad-hoc git flow flavours, that lack a normative reference and a set of tools. This is an attempt to fix that relying on a set of [porcelain](https://git-scm.com/book/tr/v2/Git-Internals-Plumbing-and-Porcelain) git commands.
 
+
 ## Workflow
  
-Git lean has two long running branches (as in git flow) *develop* and *master*. The following rules apply:
+Git lean has two long living branches (as in git flow) *develop* and *master*. 
+
+![diagram.png](diagram.png)
+
+The following rules apply:
 
 * Anything in the *master* branch is **always** deployable to production.
 * You **must** not commit directly to the *master* branch.
 * Features **must** be implemented in specific *feature* branches.
-* Merges **must** be done with [--no-ff](http://stackoverflow.com/questions/6701292/git-fast-forward-vs-no-fast-forward-merge).
+* Merges **must** be done with [--no-ff](http://stackoverflow.com/questions/6701292/git-fast-forward-vs-no-fast-forward-merge). 
 * Public history **must** not be [rewriten](http://www.mail-archive.com/dri-devel@lists.sourceforge.net/msg39091.html). 
+* Master branch **must not** be merged back to *develop*.
+* All branches exist both locally and in a git remote repository.
 
-You should prefer use commit features branches to direct commits to the *develop* branch. However you may commit directly to the *develop* branch for bug fixes and small changes. 
+Rebase is a quite powerful feature. However it requires a mildly complex mental model and therefore is not included in the `git-lean` flow.
 
+You should prefer use commit features branches to direct commits to the *develop* branch. However you may commit directly to the *develop* branch for bug fixes and small changes. For long running features you may merge the *develop* branch into the feature brach.
 
-The workflow assumes you have a centralized git remote repository.
+There are no release branches. This workflow assumes that fixing old versions is a rare requirement since code is release often. If that is really necessary you should create a *support* branch from the specific release. 
+
 
 ## How to use
 
 ### Install
 
-Download `git-lean` file and copy it to `/usr/local/bin/git-lean`. Make sure it's world executable with `sudo chmod a+x /usr/local/bin/git-lean`.
+#### Mac and Linux users
+
+    curl https://raw.githubusercontent.com/tozevv/git-lean/master/git-lean > /usr/local/bin/git-lean
+    sudo chmod a+x /usr/local/bin/git-lean
+
+#### Windows users
+
+Download `https://raw.githubusercontent.com/tozevv/git-lean/master/git-lean` and copy it to `C:\Program Files (x86)\Git\libexec\git-core`.
+
 
 ### Create a project
 
@@ -43,7 +60,7 @@ To follow the example please fork the sample project [https://github.com/tozevv/
 
 Every new checkout requires a init:
 
-	$ cd it-lean-playground
+	$ cd git-lean-playground
 	$ git lean init
 	
 You have now an empty repository with a *master* and *develop* branch.
@@ -62,7 +79,7 @@ This signals the feature as ready to create a merge request (or [pull request](h
  
 ### Reviewing and merging a feature
 
-To swith to any feature branch for review or additional work:
+To switch to any feature branch for review or additional work:
 
 	$ git lean feature work awesome-feature
 
@@ -91,7 +108,7 @@ Notice that the version isn't the same if you query develop branch for example:
 	0.3.0-snapshot
 
 This reduces the number of tags but provides a usefull way to identify a current working version. 
-`git lean version` assumes the next release is minor and version 0.1.0-snapshot if no releases where created.
+`git lean version` assumes the next release is minor and version `0.1.0-snapshot` if no releases where created.
 	
 ### Hotfixes
  
@@ -100,7 +117,7 @@ A continuous delivery process should strive to create production ready builds. I
 When faced with a required production hotfix one shall carefully consider one of two options
 
 1. Create a new release based on the latest *develop* code with the fix applied.
-2. Create a *support* branch from the *master* branch and apply your fix.
+2. Create a *support* branch (ex: `support-1.2`) from the *master* branch and apply your fixes. 
 
 `git-lean` assumes the first option is usually preferable reducing the work overload of maintaining multiple versions. You may do the latter manually by branching from the release tag. 
 
