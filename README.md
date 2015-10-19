@@ -130,4 +130,10 @@ To cleanup feature branches that are no longer necessary:
 
 This deletes the feature branch on the local and remote repository.
 
+# Aknowledgements
+
+This work is heavily inspired in @pmcxs work in Sky.
+Thanks to @cguedes, @pmhsfelix, @sky-celsofernandes for reviewing this document and providind insightful suggestions.
+
+
 
