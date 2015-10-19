@@ -202,6 +202,7 @@ cmd_feature() {
 			if git_clean; then
 
 				git fetch --quiet && 
+				git push origin $FEATURES/$3 --quiet &&
 				git checkout $FEATURES/$3 --quiet && git pull --quiet &&	
 				git checkout $DEVELOP --quiet && git pull --quiet &&
 				git merge --no-ff $FEATURES/$3 --log  &&
