@@ -250,7 +250,7 @@ cmd_release() {
 			exit 1
 		fi
  
-		if [[ "$2" =~ ([0-9]+\.){2}[0-9]+ ]]; then
+        if echo $2 | grep -E '([0-9]+\.){2}[0-9]+' > /dev/null; then
 		
 		 	git fetch --quiet && 
 		 	git checkout $DEVELOP --quiet && git pull --quiet &&	
@@ -262,6 +262,7 @@ cmd_release() {
 		 	git merge --no-ff $DEVELOP -m "Release $2" &&
 		 	
 		 	git push origin $MASTER --tags 
+
 		else
 		 	echo "fatal: version parameter must be <major.minor.patch>"
 		 	exit 1
