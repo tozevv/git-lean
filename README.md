@@ -14,7 +14,6 @@ Tools for a lean git workflow.
  
 So we ended up frequently using custom ad-hoc git flow flavours, that lack a normative reference and a set of tools. This is an attempt to fix that relying on a set of [porcelain](https://git-scm.com/book/tr/v2/Git-Internals-Plumbing-and-Porcelain) git commands.
 
-
 ## Workflow
  
 Git lean has two long living branches (as in git flow) *develop* and *master*. 
