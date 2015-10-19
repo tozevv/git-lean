@@ -78,6 +78,8 @@ This signals the feature as ready to create a merge request (or [pull request](h
  
 ### Reviewing and merging a feature
 
+Peer review is highly encouraged in `git-lean` and is the first step of approving a feature pull request.
+
 To switch to any feature branch for review or additional work:
 
 	$ git lean feature work awesome-feature
