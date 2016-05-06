@@ -290,7 +290,7 @@ cmd_version() {
 			echo $VERSION
 		else
 			# create automatic bumped version for develop and feature branches
-			# assume major version is bumped
+			# assume minor version is bumped
 			echo $VERSION | awk -F \. {'print $1"."($2+1)".0-snapshot"'}
 
 		fi
