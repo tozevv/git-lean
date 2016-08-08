@@ -256,12 +256,12 @@ cmd_release() {
 		 	git fetch --quiet && 
 		 	git checkout $DEVELOP --quiet && git pull --quiet &&	
 			
-			git tag $2 &&
-
 		 	git checkout $MASTER --quiet && git pull --quiet &&
  			
 		 	git merge --no-ff $DEVELOP -m "Release $2" &&
-		 	
+			
+			git tag $2 &&
+
 		 	git push origin $MASTER --tags 
 
 		else
