@@ -234,7 +234,7 @@ cmd_feature() {
 	fi
 }
 
-help_feature() {
+help_release() {
 	echo "usage: git lean release <major.minor.patch>"
 }
 
