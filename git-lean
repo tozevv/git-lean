@@ -178,9 +178,11 @@ cmd_feature() {
 			check_ready
 			check_clean
 
+			featureName=$(echo "$3" | tr " " _)			
+
 			git checkout $DEVELOP --quiet && 
-			git checkout -b $FEATURES/$3 &&
-			git push --set-upstream origin $FEATURES/$3 --quiet ||
+			git checkout -b $FEATURES/$featureName &&
+			git push --set-upstream origin $FEATURES/$featureName --quiet ||
 				{ echo 'fatal: failed to create feature.' ; exit 1; }
 
 		elif [ "$2" == "publish" ]; then
@@ -299,13 +301,13 @@ cmd_version() {
 }
 
 if [ "$1" == "init" ]; then
-	cmd_init $@
+	cmd_init "$@"
 elif [ "$1" == "feature" ]; then
-	cmd_feature $@
+	cmd_feature "$@"
 elif [ "$1" == "release" ]; then
-	cmd_release $@
+	cmd_release "$@"
 elif [ "$1" == "version" ]; then
-	cmd_version $@
+	cmd_version "$@"
 else
 	help
 	exit 1
